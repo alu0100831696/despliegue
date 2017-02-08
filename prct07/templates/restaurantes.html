@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}
+Restaurantes
+{% endblock %}
+
+{% block content %}
+<!--TABLA DE DATOS-->
+<table id="example" class="table table-hover table-bordered" cellspacing="0" width="100%">
+  <thead>
+     <tr>
+       <th>Identificador</th>
+       <th>Restaurante</th>
+        <th>Tipo de cocina</th>
+        <th>Barrio</th>
+      </tr>
+  </thead>
+  <tfoot>
+ <!--http://getbootstrap.com/components/     http://www.w3schools.com/bootstrap/bootstrap_buttons.asp-->
+     <td colspan="4">
+      <center> <div class="btn-group btn-group-sm text-center">
+         <center> <div class="btn-group btn-group-sm text-center">
+         <button type="button" class="btn btn-primary btn-md" id="add" data-toggle="modal" data-target="#myModal"><span class="glyphicon glyphicon-plus-sign" ></span> Añadir</button>
+         <button type="button" id="modi" class="btn btn-primary btn-md" data-toggle="modal" data-target="#myModal"><span class="glyphicon glyphicon-pencil" ></span> Editar</button>
+         <button type="button" id="remove" class="btn btn-primary btn-md"  ><span class="glyphicon glyphicon-remove-sign"></span> Eliminar</button>
+        </div></center>
+     </td>
+ </tfoot>
+</table>
+
+<script src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script> <!--CSS-->
+<script src="https://cdn.datatables.net/1.10.12/js/dataTables.bootstrap.min.js"></script> <!--JS-->
+
+ <script type="text/javascript">
+   $(document).ready(function(){
+     var restaurante="";
+     var btn=0;
+     $("#aForm").submit(function(e) {
+         e.preventDefault(); 
+         if(btn==0)
+           insertTable()
+         else
+           updTable()
+       });
+     
+     function insertTable(){
+       $.ajax({
+         type: "POST",
+         url: "/restaurantes/addRestaurants/",
+         data: $("#aForm").serialize(),  //Ajax and the jQuery serialize function to send the form data
+         dataType: "json",
+         headers: {'X-CSRFToken': '{{ csrf_token }}'},
+         success: function(data)
+         {
+           data=data.mensaje
+           var table = $('#example').DataTable();
+           table.row.add( {
+             "restaurant_id": data.restaurant_id,
+             "name":   data.name,
+             "cuisine": data.cuisine,
+             "borough": data.borough
+           } ).draw()
+           $('#myModal').modal('toggle');
+        }});
+     }
+    
+     function updTable(){
+           $.ajax({
+             type: "POST",
+             url: "/restaurantes/updateRestaurants/",
+             data: $("#aForm").serialize(), 
+            dataType: "json",
+             success: function(data)
+             {
+               data=data.mensaje
+               $(restaurante[0]).html(data.restaurant_id)
+               $(restaurante[1]).html(data.name)
+               $(restaurante[2]).html(data.cuisine)
+               $(restaurante[3]).html(data.borough)
+               $('#myModal').modal('toggle');
+             }});
+     }
+          $('#example').DataTable({
+              "ajax": "/restaurantes/loadRestaurants",
+              "columns":[
+                {"data":"restaurant_id"},
+                {"data":"name"},
+                {"data":"cuisine"},
+                {"data":"borough"}
+              ],
+              "language": {
+                 "lengthMenu": "Listar _MENU_ ",
+                 "zeroRecords": "Carga | Vacío",
+                 "info": " Pág _PAGE_ of _PAGES_",
+                 "search": "Filtrar Búsqueda: "
+               }
+          });
+         
+          $('#example').on('click','tbody tr',function(){
+            restaurante=$(this).find('td');
+            $('#example').find('.success').removeClass('success');
+            $(this).addClass('success');
+          });
+          $('#remove').on('click',function(){
+            var id=$(restaurante[0]).html();
+             $.get("/restaurantes/delRestaurants/", { 'id':id },function(data,status){
+                 var table = $('#example').DataTable();
+                 table.row($('#example').find('.success')).remove().draw();
+                 restaurante="";
+             });
+          });
+          $('#modi').on('click',function(e){
+            btn=1
+            if(restaurante!=""){
+              $('#id_id_restaurante')[0].value=$(restaurante[0]).html();
+              $('#id_nombre')[0].value=$(restaurante[1]).html();
+              $('#id_cocina')[0].value=$(restaurante[2]).html();
+              $('#id_ciudad')[0].value=$(restaurante[3]).html();
+              $('#btn-signup').html("Modificar");
+            }else{
+                $('#myModal').modal('toggle');
+            }
+          });
+          $('#add').on('click',function(){
+            btn=0
+            $('#id_nombre')[0].value="";
+            $('#id_id_restaurante')[0].value="";
+            $('#id_ciudad')[0].value="";
+            $('#id_cocina')[0].value="";
+            $('#btn-signup').html("Añadir");
+          });
+        });
+ </script>
+ 
+
+   <div class="modal fade" id="myModal" role="dialog">
+     <div class="modal-dialog">
+
+      <div class="modal-content">
+         <div class="modal-header">
+           <button type="button" class="close" data-dismiss="modal">&times;</button>
+           
+         </div>
+         <div id="modal" class="modal-body">
+           <form  id="aForm"  class="form-horizontal" role="form">
+             {% csrf_token %}
+            {{ form.as_p }}
+            <div class="form-group" id="alert"></div>
+              <div class="form-group">
+                <div class="col-md-offset-3 col-md-9">
+                     <button id="btn-signup" type="submit" class="btn btn-primary btn-md"><i class="icon-hand-right"></i>Añadir</button>
+                 </div>
+             </div>
+           </form>
+         </div>
+       </div>
+
+     </div>
+   </div>
+
+ </div>
+{% endblock %}
